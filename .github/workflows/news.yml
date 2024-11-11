@@ -1,0 +1,59 @@
+name: News Crawler
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+        - info
+        - warning
+        - debug
+      tags:
+        description: 'Test scenario tags'
+        required: false
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: actions/news
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Run news.py
+      run: |
+        python news.py
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  close-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/stale@v9
+        with:
+          only-issue-labels: "news"
+          days-before-issue-stale: 14
+          days-before-issue-close: 7
+          stale-issue-label: "stale"
+          stale-issue-message: "This issue is stale because it has been open for 14 days with no activity."
+          close-issue-message: "This issue was closed because it has been inactive for 7 days since being marked as stale."
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          repo-token: ${{ secrets.GH_TOKEN }}
